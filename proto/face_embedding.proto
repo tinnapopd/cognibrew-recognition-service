@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package cognibrew.inference;
+
+message FaceEmbedding {
+  repeated int32  bbox       = 1;  // bounding box [x1, y1, x2, y2]
+  repeated float  embedding  = 2;  // face embedding vector (e.g. 512-dim)
+  float           det_score  = 3;  // detection confidence score
+}

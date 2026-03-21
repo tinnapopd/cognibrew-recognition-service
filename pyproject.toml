@@ -1,0 +1,5 @@
+[tool.pyrefly]
+search_path = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
