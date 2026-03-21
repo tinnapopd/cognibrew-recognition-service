@@ -14,7 +14,7 @@ protoc \
   --python_out="${OUT_DIR}" \
   --proto_path="${PROTO_DIR}" \
   "${PROTO_DIR}"/face_embedding.proto \
-  "${PROTO_DIR}"/person_update.proto \
+  "${PROTO_DIR}"/face_update.proto \
   "${PROTO_DIR}"/face_result.proto
 
 # Create __init__.py so the directory is importable

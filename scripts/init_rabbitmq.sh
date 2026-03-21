@@ -18,9 +18,9 @@ RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
 RABBITMQ_INFERENCE_EXCHANGE=${RABBITMQ_INFERENCE_EXCHANGE:-cognibrew.inference}
 RABBITMQ_FACE_EMBEDDED_ROUTING_KEY=${RABBITMQ_FACE_EMBEDDED_ROUTING_KEY:-face.embedded}
 
-# Person sync (cloud --> vectordb)
-RABBITMQ_PERSON_SYNC_EXCHANGE=${RABBITMQ_PERSON_SYNC_EXCHANGE:-cognibrew.vectordb}
-RABBITMQ_PERSON_SYNC_ROUTING_KEY=${RABBITMQ_PERSON_SYNC_ROUTING_KEY:-person.updated}
+# Face update (cloud --> vectordb)
+RABBITMQ_FACE_UPDATE_EXCHANGE=${RABBITMQ_FACE_UPDATE_EXCHANGE:-cognibrew.vectordb}
+RABBITMQ_FACE_UPDATE_ROUTING_KEY=${RABBITMQ_FACE_UPDATE_ROUTING_KEY:-face.updated}
 
 
 # Launch RabbitMQ using Docker
@@ -97,18 +97,18 @@ while True:
     time.sleep(1)
 FACE_MOCK
 
-# Mock 2: PersonUpdate (cloud --> vectordb)
->&2 echo "[mock] PersonUpdate → ${RABBITMQ_PERSON_SYNC_EXCHANGE}/${RABBITMQ_PERSON_SYNC_ROUTING_KEY}"
+# Mock 2: FaceUpdate (cloud --> vectordb)
+>&2 echo "[mock] FaceUpdate → ${RABBITMQ_FACE_UPDATE_EXCHANGE}/${RABBITMQ_FACE_UPDATE_ROUTING_KEY}"
 
 PYTHONPATH=src \
   MQ_PORT="${RABBITMQ_PORT}" \
   MQ_USER="${RABBITMQ_DEFAULT_USER}" \
   MQ_PASS="${RABBITMQ_DEFAULT_PASS}" \
-  MQ_EXCHANGE="${RABBITMQ_PERSON_SYNC_EXCHANGE}" \
-  MQ_ROUTING_KEY="${RABBITMQ_PERSON_SYNC_ROUTING_KEY}" \
+  MQ_EXCHANGE="${RABBITMQ_FACE_UPDATE_EXCHANGE}" \
+  MQ_ROUTING_KEY="${RABBITMQ_FACE_UPDATE_ROUTING_KEY}" \
 python3 - <<'PERSON_MOCK' &
 import os, random, string, sys, time, uuid, pika
-from schemas.proto.person_update_pb2 import PersonUpdate
+from schemas.proto.face_update_pb2 import PersonUpdate
 
 port = int(os.environ.get("MQ_PORT", "5672"))
 user = os.environ.get("MQ_USER", "guest")
@@ -124,7 +124,7 @@ connection = pika.BlockingConnection(
 )
 channel = connection.channel()
 channel.exchange_declare(exchange=exchange, exchange_type="topic", durable=True)
-queue = os.environ.get("MQ_QUEUE", "cognibrew.vectordb.person_updated")
+queue = os.environ.get("MQ_QUEUE", "cognibrew.vectordb.face_updated")
 channel.queue_declare(queue=queue, durable=True)
 channel.queue_bind(queue=queue, exchange=exchange, routing_key=routing_key)
 
