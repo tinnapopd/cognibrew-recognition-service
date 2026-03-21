@@ -3,11 +3,7 @@ syntax = "proto3";
 package cognibrew.recognition;
 
 message FaceRecognized {
-  string         username  = 1;  // matched person's username
-  float          score     = 2;  // cosine similarity score
-  repeated int32 bbox      = 3;  // bounding box [x1, y1, x2, y2]
-}
-
-message FaceUnknown {
-  repeated int32 bbox = 1;  // bounding box [x1, y1, x2, y2]
+  repeated int32 bbox      = 1;  // bounding box [x1, y1, x2, y2]
+  string         username  = 2;  // matched person's username
+  float          score     = 3;  // cosine similarity score
 }
