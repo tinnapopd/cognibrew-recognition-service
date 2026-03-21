@@ -23,8 +23,8 @@ class MessageQueue:
         queue_name: str | None = None,
     ) -> None:
         self._config = settings.rabbitmq
-        self._exchange = exchange_name or self._config.EXCHANGE_NAME
-        self._queue = queue_name or self._config.QUEUE_NAME
+        self._exchange = exchange_name or self._config.INFERENCE_EXCHANGE_NAME
+        self._queue = queue_name or self._config.INFERENCE_QUEUE_NAME
         self._connection: pika.BlockingConnection | None = None
         self._channel: BlockingChannel | None = None
 
@@ -84,7 +84,6 @@ class MessageQueue:
             routing_key=routing_key,
             body=body,
             properties=pika.BasicProperties(
-                delivery_mode=2,  # Persistent message
                 content_type="application/x-protobuf",
             ),
         )

@@ -9,15 +9,13 @@ from core.message_queue import MessageQueue
 from core.vectordb import QdrantProcessor
 
 from schemas.proto.face_embedding_pb2 import FaceEmbedding  # type: ignore
-from schemas.proto.face_result_pb2 import FaceRecognized, FaceUnknown  # type: ignore
-from schemas.proto.person_update_pb2 import PersonUpdate  # type: ignore
+from schemas.proto.face_result_pb2 import FaceRecognized  # type: ignore
+from schemas.proto.face_update_pb2 import PersonUpdate  # type: ignore
 
 logger = Logger().get_logger()
 
 
-# ---------------------------------------------------------------------------
-# Consumer 1: Face recognition (inference → recognition)
-# ---------------------------------------------------------------------------
+# Consumer 1: Face recognition (inference --> recognition)
 class RecognitionProcessor:
     """Consumes FaceEmbedding protobuf messages from the inference service,
     looks up identities in Qdrant, and publishes match results as protobuf."""
@@ -67,20 +65,15 @@ class RecognitionProcessor:
                 "face_recognized",
                 extra={
                     "username": match["username"],
-                    "score": round(match["score"], 4),
-                    "det_score": round(det_score, 4),
+                    "score": round(match["score"], 2),
+                    "det_score": round(det_score, 2),
                 },
             )
         else:
-            result = FaceUnknown(bbox=bbox)
-            self.mq.publish(
-                body=result.SerializeToString(),
-                routing_key=settings.rabbitmq.FACE_UNKNOWN_ROUTING_KEY,
-            )
             logger.info(
                 "face_unknown",
                 extra={
-                    "det_score": round(det_score, 4),
+                    "det_score": round(det_score, 2),
                 },
             )
 
@@ -96,22 +89,20 @@ class RecognitionProcessor:
             logger.info("Recognition consumer stopped")
 
 
-# ---------------------------------------------------------------------------
-# Consumer 2: Person updates (cloud → vectordb)
-# ---------------------------------------------------------------------------
-class PersonUpdateProcessor:
+# Consumer 2: Face updates (cloud --> vectordb)
+class FaceUpdateProcessor:
     """Consumes PersonUpdate protobuf messages from the cloud and
     creates / updates / deletes person embeddings in Qdrant."""
 
     def __init__(self) -> None:
         self.qdrant = QdrantProcessor()
         self.mq = MessageQueue(
-            exchange_name=settings.person_sync.EXCHANGE_NAME,
-            queue_name=settings.person_sync.QUEUE_NAME,
+            exchange_name=settings.rabbitmq.FACE_UPDATE_EXCHANGE_NAME,
+            queue_name=settings.rabbitmq.FACE_UPDATE_QUEUE_NAME,
         )
 
-    def _on_person_updated(self, body: bytes) -> None:
-        """Callback for each person.updated protobuf message."""
+    def _on_face_updated(self, body: bytes) -> None:
+        """Callback for each face.updated protobuf message."""
         msg = PersonUpdate()
         msg.ParseFromString(body)
 
@@ -161,26 +152,28 @@ class PersonUpdateProcessor:
             )
 
     def start(self) -> None:
-        logger.info("PersonUpdate consumer started, waiting for updates…")
+        logger.info("FaceUpdate consumer started, waiting for updates…")
         self.mq.connect(
-            binding_keys=[settings.person_sync.ROUTING_KEY],
+            binding_keys=[settings.rabbitmq.FACE_UPDATE_ROUTING_KEY],
         )
         try:
-            self.mq.consume(callback=self._on_person_updated)
+            self.mq.consume(callback=self._on_face_updated)
         finally:
             self.mq.close()
-            logger.info("PersonUpdate consumer stopped")
+            logger.info("FaceUpdate consumer stopped")
 
 
-# ---------------------------------------------------------------------------
 # Entrypoint: run both consumers on separate threads
-# ---------------------------------------------------------------------------
 def main() -> None:
     recognition = RecognitionProcessor()
-    person_sync = PersonUpdateProcessor()
+    face_update = FaceUpdateProcessor()
 
-    t1 = threading.Thread(target=recognition.start, name="recognition", daemon=True)
-    t2 = threading.Thread(target=person_sync.start, name="person-sync", daemon=True)
+    t1 = threading.Thread(
+        target=recognition.start, name="recognition", daemon=True
+    )
+    t2 = threading.Thread(
+        target=face_update.start, name="face-update", daemon=True
+    )
 
     t1.start()
     t2.start()

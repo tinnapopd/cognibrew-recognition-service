@@ -25,14 +25,13 @@ class RabbitMQConfig(BaseSettings):
 
     # Routing keys – outbound (recognition results)
     FACE_RECOGNIZED_ROUTING_KEY: str = Field(default="face.recognized")
-    FACE_UNKNOWN_ROUTING_KEY: str = Field(default="face.unknown")
 
-    # Person sync (cloud --> vectordb)
-    PERSON_SYNC_EXCHANGE_NAME: str = Field(default="cognibrew.vectordb")
-    PERSON_SYNC_QUEUE_NAME: str = Field(
-        default="cognibrew.vectordb.person_updated"
+    # Face update (cloud --> vectordb)
+    FACE_UPDATE_EXCHANGE_NAME: str = Field(default="cognibrew.vectordb")
+    FACE_UPDATE_QUEUE_NAME: str = Field(
+        default="cognibrew.vectordb.face_updated"
     )
-    PERSON_SYNC_ROUTING_KEY: str = Field(default="person.updated")
+    FACE_UPDATE_ROUTING_KEY: str = Field(default="face.updated")
 
 
 class QdrantConfig(BaseSettings):

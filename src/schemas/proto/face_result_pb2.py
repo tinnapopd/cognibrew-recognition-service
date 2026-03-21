@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x66\x61\x63\x65_result.proto\x12\x15\x63ognibrew.recognition\"?\n\x0e\x46\x61\x63\x65Recognized\x12\x10\n\x08username\x18\x01 \x01(\t\x12\r\n\x05score\x18\x02 \x01(\x02\x12\x0c\n\x04\x62\x62ox\x18\x03 \x03(\x05\"\x1b\n\x0b\x46\x61\x63\x65Unknown\x12\x0c\n\x04\x62\x62ox\x18\x01 \x03(\x05\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x66\x61\x63\x65_result.proto\x12\x15\x63ognibrew.recognition\"?\n\x0e\x46\x61\x63\x65Recognized\x12\x0c\n\x04\x62\x62ox\x18\x01 \x03(\x05\x12\x10\n\x08username\x18\x02 \x01(\t\x12\r\n\x05score\x18\x03 \x01(\x02\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,6 +33,4 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_FACERECOGNIZED']._serialized_start=44
   _globals['_FACERECOGNIZED']._serialized_end=107
-  _globals['_FACEUNKNOWN']._serialized_start=109
-  _globals['_FACEUNKNOWN']._serialized_end=136
 # @@protoc_insertion_point(module_scope)
