@@ -1,4 +1,5 @@
 import threading
+import time
 from typing import Optional, Dict, Any
 
 import numpy as np
@@ -49,7 +50,9 @@ class RecognitionProcessor:
         bbox = list(msg.bbox)
         det_score = msg.det_score
 
+        t0 = time.perf_counter()
         match = self._identify(embedding)
+        latency_ms = round((time.perf_counter() - t0) * 1000, 1)
 
         if match:
             result = FaceRecognized(
@@ -67,6 +70,8 @@ class RecognitionProcessor:
                     "username": match["username"],
                     "score": round(match["score"], 2),
                     "det_score": round(det_score, 2),
+                    "bbox": bbox,
+                    "latency_ms": latency_ms,
                 },
             )
         else:
@@ -74,6 +79,8 @@ class RecognitionProcessor:
                 "face_unknown",
                 extra={
                     "det_score": round(det_score, 2),
+                    "bbox": bbox,
+                    "latency_ms": latency_ms,
                 },
             )
 
@@ -148,7 +155,10 @@ class FaceUpdateProcessor:
         else:
             logger.warning(
                 "unknown_person_action",
-                extra={"person_id": person_id, "action": action},
+                extra={
+                    "person_id": person_id,
+                    "action": PersonUpdate.Action.Name(action),
+                },
             )
 
     def start(self) -> None:
