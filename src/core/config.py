@@ -13,8 +13,12 @@ class RabbitMQConfig(BaseSettings):
     PORT: int = Field(default=5672)
     USERNAME: str = Field(default="guest")
     PASSWORD: str = Field(default="guest")
-    EXCHANGE_NAME: str = Field(default="cognibrew.inference")
-    QUEUE_NAME: str = Field(default="cognibrew.inference.face_embedded")
+
+    # Recognition (Inference Server -> Recognition Service)
+    INFERENCE_EXCHANGE_NAME: str = Field(default="cognibrew.inference")
+    INFERENCE_QUEUE_NAME: str = Field(
+        default="cognibrew.inference.face_embedded"
+    )
 
     # Routing keys – inbound
     FACE_EMBEDDED_ROUTING_KEY: str = Field(default="face.embedded")
@@ -23,19 +27,12 @@ class RabbitMQConfig(BaseSettings):
     FACE_RECOGNIZED_ROUTING_KEY: str = Field(default="face.recognized")
     FACE_UNKNOWN_ROUTING_KEY: str = Field(default="face.unknown")
 
-
-class PersonSyncConfig(BaseSettings):
-    """RabbitMQ settings for the person-update consumer (cloud --> vectordb)."""
-
-    model_config = SettingsConfigDict(
-        frozen=False,
-        env_prefix="PERSON_SYNC_",
-        case_sensitive=False,
+    # Person sync (cloud --> vectordb)
+    PERSON_SYNC_EXCHANGE_NAME: str = Field(default="cognibrew.vectordb")
+    PERSON_SYNC_QUEUE_NAME: str = Field(
+        default="cognibrew.vectordb.person_updated"
     )
-
-    EXCHANGE_NAME: str = Field(default="cognibrew.vectordb")
-    QUEUE_NAME: str = Field(default="cognibrew.vectordb.person_updated")
-    ROUTING_KEY: str = Field(default="person.updated")
+    PERSON_SYNC_ROUTING_KEY: str = Field(default="person.updated")
 
 
 class QdrantConfig(BaseSettings):
@@ -75,7 +72,6 @@ class Settings:
 
     def __init__(self) -> None:
         self.rabbitmq = RabbitMQConfig()
-        self.person_sync = PersonSyncConfig()
         self.qdrant = QdrantConfig()
         self.model = ModelConfig()
 
