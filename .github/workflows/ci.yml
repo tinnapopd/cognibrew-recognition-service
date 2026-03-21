@@ -8,6 +8,7 @@ on:
       - ".env.example"
 
   push:
+    branches: [main]
     tags:
       - "v*"
 
@@ -87,5 +88,5 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/actions:face-recognition-${{ env.VERSION }}-${{ env.COMMIT_HASH }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/actions:face-recognition-latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/actions:cognibrew-recognition-service-${{ env.VERSION }}-${{ env.COMMIT_HASH }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/actions:cognibrew-recognition-service-latest
