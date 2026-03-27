@@ -59,64 +59,56 @@ class TestRecognitionProcessor:
 
 
 class TestFaceUpdateProcessor:
+    @patch("main.uuid.uuid4")
     @patch("main.QdrantProcessor")
     @patch("main.MessageQueue")
-    def test_create_action(self, MockMQ, MockQdrant):
+    def test_face_update_new_person(self, MockMQ, MockQdrant, mock_uuid):
         from main import FaceUpdateProcessor
 
-        mock_qdrant = MockQdrant.return_value
+        mock_uuid.return_value = "new-uuid"
+        mock_qdrant_inst = MockQdrant.return_value
+        mock_qdrant_inst.search.return_value = []  # No exact match found
+
         proc = FaceUpdateProcessor()
-        proc.qdrant = mock_qdrant
+        proc.qdrant = mock_qdrant_inst
 
         msg = PersonUpdate(
-            person_id="id-1",
             username="bob",
             embedding=[0.5] * 512,
-            action=PersonUpdate.CREATE,
         )
         proc._on_face_updated(msg.SerializeToString())
 
-        mock_qdrant.create.assert_called_once()
-        call_kwargs = mock_qdrant.create.call_args.kwargs
+        mock_qdrant_inst.search.assert_called_once()
+        mock_qdrant_inst.delete.assert_not_called()
+        mock_qdrant_inst.create.assert_called_once()
+
+        call_kwargs = mock_qdrant_inst.create.call_args.kwargs
         assert call_kwargs["username"] == "bob"
-        assert call_kwargs["point_id"] == "id-1"
+        assert call_kwargs["point_id"] == "new-uuid"
 
+    @patch("main.uuid.uuid4")
     @patch("main.QdrantProcessor")
     @patch("main.MessageQueue")
-    def test_delete_action(self, MockMQ, MockQdrant):
+    def test_face_update_existing_person(self, MockMQ, MockQdrant, mock_uuid):
         from main import FaceUpdateProcessor
 
-        mock_qdrant = MockQdrant.return_value
+        mock_uuid.return_value = "new-uuid"
+        mock_qdrant_inst = MockQdrant.return_value
+        mock_qdrant_inst.search.return_value = [{"id": "old-uuid-999", "score": 0.995}]
+
         proc = FaceUpdateProcessor()
-        proc.qdrant = mock_qdrant
+        proc.qdrant = mock_qdrant_inst
 
         msg = PersonUpdate(
-            person_id="id-2",
             username="charlie",
-            action=PersonUpdate.DELETE,
+            embedding=[0.6] * 512,
         )
         proc._on_face_updated(msg.SerializeToString())
 
-        mock_qdrant.delete.assert_called_once_with(point_ids=["id-2"])
+        mock_qdrant_inst.search.assert_called_once()
+        mock_qdrant_inst.delete.assert_called_once_with(point_ids=["old-uuid-999"])
+        mock_qdrant_inst.create.assert_called_once()
 
-    @patch("main.QdrantProcessor")
-    @patch("main.MessageQueue")
-    def test_update_action(self, MockMQ, MockQdrant):
-        from main import FaceUpdateProcessor
-
-        mock_qdrant = MockQdrant.return_value
-        proc = FaceUpdateProcessor()
-        proc.qdrant = mock_qdrant
-
-        msg = PersonUpdate(
-            person_id="id-3",
-            username="diana",
-            embedding=[0.3] * 512,
-            action=PersonUpdate.UPDATE,
-        )
-        proc._on_face_updated(msg.SerializeToString())
-
-        mock_qdrant.update.assert_called_once()
-        call_kwargs = mock_qdrant.update.call_args.kwargs
-        assert call_kwargs["point_id"] == "id-3"
-        assert call_kwargs["username"] == "diana"
+        call_kwargs = mock_qdrant_inst.create.call_args.kwargs
+        assert call_kwargs["username"] == "charlie"
+        assert call_kwargs["point_id"] == "new-uuid"

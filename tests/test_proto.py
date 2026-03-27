@@ -48,39 +48,22 @@ class TestFaceRecognizedProto:
 
 
 class TestPersonUpdateProto:
-    def test_create_action(self):
+    def test_round_trip(self):
         msg = PersonUpdate(
-            person_id="abc-123",
             username="bob",
             embedding=[0.5] * 512,
-            action=PersonUpdate.CREATE,
         )
         data = msg.SerializeToString()
         restored = PersonUpdate()
         restored.ParseFromString(data)
 
-        assert restored.person_id == "abc-123"
         assert restored.username == "bob"
-        assert restored.action == PersonUpdate.CREATE
         assert len(restored.embedding) == 512
 
-    def test_delete_action_no_embedding(self):
-        msg = PersonUpdate(
-            person_id="xyz-789",
-            username="charlie",
-            action=PersonUpdate.DELETE,
-        )
-        data = msg.SerializeToString()
-        restored = PersonUpdate()
-        restored.ParseFromString(data)
-
-        assert restored.action == PersonUpdate.DELETE
-        assert len(restored.embedding) == 0
-
-    def test_action_enum_values(self):
-        assert PersonUpdate.CREATE == 0
-        assert PersonUpdate.UPDATE == 1
-        assert PersonUpdate.DELETE == 2
+    def test_empty_message(self):
+        msg = PersonUpdate()
+        assert msg.username == ""
+        assert len(msg.embedding) == 0
 
 
 import pytest  # noqa: E402 – needed for pytest.approx above

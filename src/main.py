@@ -1,6 +1,7 @@
 import threading
 import time
 from typing import Optional, Dict, Any
+import uuid
 
 import numpy as np
 
@@ -113,53 +114,28 @@ class FaceUpdateProcessor:
         msg = PersonUpdate()
         msg.ParseFromString(body)
 
-        person_id = msg.person_id
         username = msg.username
-        action = msg.action
+        person_id = str(uuid.uuid4())
+        embedding = np.array(msg.embedding, dtype=np.float32)
 
-        if action == PersonUpdate.CREATE:
-            embedding = np.array(msg.embedding, dtype=np.float32)
-            self.qdrant.create(
-                embedding=embedding,
-                username=username,
-                point_id=person_id,
-            )
-            logger.info(
-                "person_created",
-                extra={"person_id": person_id, "username": username},
-            )
+        # Find Exact Match Embedding and Delete it
+        hits = self.qdrant.search(
+            query_embedding=embedding,
+            top_k=1,
+            score_threshold=0.99,
+        )
+        if hits:
+            self.qdrant.delete(point_ids=[hits[0]["id"]])
 
-        elif action == PersonUpdate.UPDATE:
-            embedding = (
-                np.array(msg.embedding, dtype=np.float32)
-                if len(msg.embedding) > 0
-                else None
-            )
-            self.qdrant.update(
-                point_id=person_id,
-                embedding=embedding,
-                username=username if username else None,
-            )
-            logger.info(
-                "person_updated",
-                extra={"person_id": person_id, "username": username},
-            )
-
-        elif action == PersonUpdate.DELETE:
-            self.qdrant.delete(point_ids=[person_id])
-            logger.info(
-                "person_deleted",
-                extra={"person_id": person_id},
-            )
-
-        else:
-            logger.warning(
-                "unknown_person_action",
-                extra={
-                    "person_id": person_id,
-                    "action": PersonUpdate.Action.Name(action),
-                },
-            )
+        self.qdrant.create(
+            embedding=embedding,
+            username=username,
+            point_id=person_id,
+        )
+        logger.info(
+            "person_created",
+            extra={"person_id": person_id, "username": username},
+        )
 
     def start(self) -> None:
         logger.info("FaceUpdate consumer started, waiting for updates…")
