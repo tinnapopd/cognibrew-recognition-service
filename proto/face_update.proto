@@ -3,14 +3,6 @@ syntax = "proto3";
 package cognibrew.vectordb;
 
 message PersonUpdate {
-  string         person_id  = 1;  // unique ID (used as Qdrant point ID)
-  string         username   = 2;  // display name / label
-  repeated float embedding  = 3;  // face embedding vector (e.g. 512-dim)
-  Action         action     = 4;  // operation to perform
-
-  enum Action {
-    CREATE = 0;
-    UPDATE = 1;
-    DELETE = 2;
-  }
+  string         username   = 1;  // display name / label
+  repeated float embedding  = 2;  // face embedding vector (e.g. 512-dim)
 }
