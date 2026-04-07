@@ -95,20 +95,23 @@ class QdrantProcessor:
         query_embedding: np.ndarray,
         top_k: int = 5,
         score_threshold: Optional[float] = None,
+        with_vectors: bool = False,
     ) -> list[dict]:
         """Search for the most similar embeddings.
 
         Returns a list of dicts with keys:
-        id, score, username, is_correct.
+        id, score, username, is_correct, and optionally vector.
         """
         results = self.client.query_points(
             collection_name=self.collection_name,
             query=query_embedding.tolist(),
             limit=top_k,
             score_threshold=score_threshold,
+            with_vectors=with_vectors,
         )
-        return [
-            {
+        hits = []
+        for r in results.points:
+            hit = {
                 "id": r.id,
                 "score": r.score,
                 "username": r.payload.get("username") if r.payload else None,
@@ -116,8 +119,12 @@ class QdrantProcessor:
                 if r.payload
                 else None,
             }
-            for r in results.points
-        ]
+            if with_vectors and r.vector is not None:
+                hit["vector"] = r.vector
+
+            hits.append(hit)
+
+        return hits
 
     def get(self, point_id: str) -> Optional[dict]:
         """Retrieve a single point by ID.

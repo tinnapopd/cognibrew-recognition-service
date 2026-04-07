@@ -37,6 +37,7 @@ class RecognitionProcessor:
             query_embedding=embedding,
             top_k=1,
             score_threshold=self.threshold,
+            with_vectors=True,
         )
         if not hits:
             return None
@@ -47,6 +48,7 @@ class RecognitionProcessor:
         msg = FaceEmbedding()
         msg.ParseFromString(body)
 
+        face_id = str(uuid.uuid4())
         embedding = np.array(msg.embedding, dtype=np.float32)
         bbox = list(msg.bbox)
         det_score = msg.det_score
@@ -57,9 +59,13 @@ class RecognitionProcessor:
 
         if match:
             result = FaceRecognized(
+                face_id=face_id,
+                bbox=bbox,
+                face_embedding=embedding.tolist(),
+                match_id=str(match["id"]),
                 username=match["username"],
                 score=match["score"],
-                bbox=bbox,
+                match_embedding=match.get("vector", []),
             )
             self.mq.publish(
                 body=result.SerializeToString(),
@@ -68,8 +74,10 @@ class RecognitionProcessor:
             logger.info(
                 "face_recognized",
                 extra={
+                    "face_id": face_id,
                     "username": match["username"],
                     "score": round(match["score"], 2),
+                    "match_id": str(match["id"]),
                     "det_score": round(det_score, 2),
                     "bbox": bbox,
                     "latency_ms": latency_ms,
@@ -79,6 +87,7 @@ class RecognitionProcessor:
             logger.info(
                 "face_unknown",
                 extra={
+                    "face_id": face_id,
                     "det_score": round(det_score, 2),
                     "bbox": bbox,
                     "latency_ms": latency_ms,
