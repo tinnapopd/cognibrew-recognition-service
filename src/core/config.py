@@ -33,6 +33,9 @@ class RabbitMQConfig(BaseSettings):
     )
     FACE_UPDATE_ROUTING_KEY: str = Field(default="face.updated")
 
+    # Suppress duplicate publishes per person
+    SEND_COOLDOWN_SECONDS: int = Field(default=30)
+
 
 class QdrantConfig(BaseSettings):
     model_config = SettingsConfigDict(

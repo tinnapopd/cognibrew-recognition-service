@@ -8,9 +8,6 @@ import pytest
 from core.config import ModelConfig, QdrantConfig, RabbitMQConfig, Settings
 
 
-# ── RabbitMQConfig ───────────────────────────────────────────────
-
-
 class TestRabbitMQConfig:
     def test_defaults(self):
         cfg = RabbitMQConfig()
@@ -32,9 +29,6 @@ class TestRabbitMQConfig:
             assert cfg.HOST == "broker.example.com"
 
 
-# ── QdrantConfig ─────────────────────────────────────────────────
-
-
 class TestQdrantConfig:
     def test_defaults(self):
         cfg = QdrantConfig()
@@ -47,9 +41,6 @@ class TestQdrantConfig:
         with patch.dict(os.environ, {"QDRANT_PORT": "9999"}):
             cfg = QdrantConfig()
             assert cfg.PORT == 9999
-
-
-# ── ModelConfig ──────────────────────────────────────────────────
 
 
 class TestModelConfig:
@@ -76,9 +67,6 @@ class TestModelConfig:
         with patch.dict(os.environ, {"MODEL_SIMILARITY_THRESHOLD": "-0.5"}):
             with pytest.raises(ValueError, match="between 0 and 1"):
                 ModelConfig()
-
-
-# ── Settings aggregate ───────────────────────────────────────────
 
 
 class TestSettings:

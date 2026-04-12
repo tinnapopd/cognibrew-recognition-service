@@ -1,7 +1,6 @@
 import threading
 import time
 from typing import Optional, Dict, Any
-import uuid
 
 import numpy as np
 
@@ -32,6 +31,19 @@ class RecognitionProcessor:
         # Outbound – publishes results on the same exchange
         # (reuses the same connection after connect)
 
+        # Cooldown: username -> last publish monotonic timestamp
+        self.cooldown_seconds = settings.rabbitmq.SEND_COOLDOWN_SECONDS
+        self._last_published = {}
+
+    def _should_publish(self, username: str) -> bool:
+        now = time.monotonic()
+        last = self._last_published.get(username)
+        if last is not None and (now - last) < self.cooldown_seconds:
+            return False
+
+        self._last_published[username] = now
+        return True
+
     def _identify(self, embedding: np.ndarray) -> Optional[Dict[str, Any]]:
         hits = self.qdrant.search(
             query_embedding=embedding,
@@ -47,7 +59,7 @@ class RecognitionProcessor:
         msg = FaceEmbedding()
         msg.ParseFromString(body)
 
-        face_id = str(uuid.uuid4())
+        face_id = msg.face_id
         embedding = np.array(msg.embedding, dtype=np.float32)
         bbox = list(msg.bbox)
         det_score = msg.det_score
@@ -57,12 +69,16 @@ class RecognitionProcessor:
         latency_ms = round((time.perf_counter() - t0) * 1000, 1)
 
         if match:
+            username, score = match["username"], match["score"]
+            if not self._should_publish(username):
+                return
+
             result = FaceRecognized(
-                bbox=bbox,
-                username=match["username"],
-                score=match["score"],
-                embedding=embedding.tolist(),
                 face_id=face_id,
+                bbox=bbox,
+                username=username,
+                score=score,
+                embedding=embedding.tolist(),
             )
             self.mq.publish(
                 body=result.SerializeToString(),
@@ -80,6 +96,21 @@ class RecognitionProcessor:
                 },
             )
         else:
+            username, score = "unknown", 0.0
+            if not self._should_publish(username):
+                return
+
+            result = FaceRecognized(
+                face_id=face_id,
+                bbox=bbox,
+                username=username,
+                score=score,
+                embedding=embedding.tolist(),
+            )
+            self.mq.publish(
+                body=result.SerializeToString(),
+                routing_key=settings.rabbitmq.FACE_RECOGNIZED_ROUTING_KEY,
+            )
             logger.info(
                 "face_unknown",
                 extra={
@@ -119,8 +150,8 @@ class FaceUpdateProcessor:
         msg = PersonUpdate()
         msg.ParseFromString(body)
 
+        person_id = msg.face_id
         username = msg.username
-        person_id = str(uuid.uuid4())
         embedding = np.array(msg.embedding, dtype=np.float32)
 
         # Find Exact Match Embedding and Delete it
