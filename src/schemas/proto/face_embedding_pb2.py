@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14\x66\x61\x63\x65_embedding.proto\x12\x13\x63ognibrew.inference\"C\n\rFaceEmbedding\x12\x0c\n\x04\x62\x62ox\x18\x01 \x03(\x05\x12\x11\n\tembedding\x18\x02 \x03(\x02\x12\x11\n\tdet_score\x18\x03 \x01(\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14\x66\x61\x63\x65_embedding.proto\x12\x13\x63ognibrew.inference\"T\n\rFaceEmbedding\x12\x0f\n\x07\x66\x61\x63\x65_id\x18\x01 \x01(\t\x12\x0c\n\x04\x62\x62ox\x18\x02 \x03(\x05\x12\x11\n\tembedding\x18\x03 \x03(\x02\x12\x11\n\tdet_score\x18\x04 \x01(\x02\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,5 +32,5 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'face_embedding_pb2', _globa
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_FACEEMBEDDING']._serialized_start=45
-  _globals['_FACEEMBEDDING']._serialized_end=112
+  _globals['_FACEEMBEDDING']._serialized_end=129
 # @@protoc_insertion_point(module_scope)

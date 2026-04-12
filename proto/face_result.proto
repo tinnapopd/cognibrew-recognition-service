@@ -3,9 +3,9 @@ syntax = "proto3";
 package cognibrew.recognition;
 
 message FaceRecognized {
-  repeated int32 bbox             = 1;  // bounding box [x1, y1, x2, y2]
-  string         username         = 2;  // matched person's username
-  float          score            = 3;  // matched cosine similarity score
-  repeated float embedding        = 4;  // incoming face embedding vector
-  string         face_id          = 5;  // incoming face id
+  string         face_id          = 1;  // incoming face id
+  repeated int32 bbox             = 2;  // bounding box [x1, y1, x2, y2]
+  string         username         = 3;  // matched person's username
+  float          score            = 4;  // matched cosine similarity score
+  repeated float embedding        = 5;  // incoming face embedding vector
 }

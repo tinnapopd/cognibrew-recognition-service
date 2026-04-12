@@ -3,6 +3,7 @@ syntax = "proto3";
 package cognibrew.vectordb;
 
 message PersonUpdate {
-  string         username   = 1;  // display name / label
-  repeated float embedding  = 2;  // face embedding vector (e.g. 512-dim)
+  string         face_id    = 1;  // unique identifier for the face
+  string         username   = 2;  // display name / label
+  repeated float embedding  = 3;  // face embedding vector (e.g. 512-dim)
 }

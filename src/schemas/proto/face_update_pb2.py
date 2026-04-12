@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x66\x61\x63\x65_update.proto\x12\x12\x63ognibrew.vectordb\"3\n\x0cPersonUpdate\x12\x10\n\x08username\x18\x01 \x01(\t\x12\x11\n\tembedding\x18\x02 \x03(\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x66\x61\x63\x65_update.proto\x12\x12\x63ognibrew.vectordb\"D\n\x0cPersonUpdate\x12\x0f\n\x07\x66\x61\x63\x65_id\x18\x01 \x01(\t\x12\x10\n\x08username\x18\x02 \x01(\t\x12\x11\n\tembedding\x18\x03 \x03(\x02\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,5 +32,5 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'face_update_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_PERSONUPDATE']._serialized_start=41
-  _globals['_PERSONUPDATE']._serialized_end=92
+  _globals['_PERSONUPDATE']._serialized_end=109
 # @@protoc_insertion_point(module_scope)
