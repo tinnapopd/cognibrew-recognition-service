@@ -40,9 +40,9 @@ class TestRecognitionProcessor:
 
     @patch("main.QdrantProcessor")
     @patch("main.MessageQueue")
-    def test_face_unknown_publishes_result(self, MockMQ, MockQdrant):
-        """When Qdrant returns no match, a FaceRecognized message with
-        username='unknown' should be published."""
+    def test_face_unknown_does_not_publish(self, MockMQ, MockQdrant):
+        """When Qdrant returns no match, no FaceRecognized message should
+        be published (unknown faces are only logged)."""
         from main import RecognitionProcessor
 
         mock_qdrant = MockQdrant.return_value
@@ -59,14 +59,7 @@ class TestRecognitionProcessor:
         )
         proc._on_face_embedded(embedding.SerializeToString())
 
-        proc.mq.publish.assert_called_once()
-        call_kwargs = proc.mq.publish.call_args.kwargs
-
-        result = FaceRecognized()
-        result.ParseFromString(call_kwargs["body"])
-        assert result.face_id == "face-002"
-        assert result.username == "unknown"
-        assert result.score == 0.0
+        proc.mq.publish.assert_not_called()
 
     @patch("main.QdrantProcessor")
     @patch("main.MessageQueue")
