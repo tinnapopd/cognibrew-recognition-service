@@ -100,17 +100,17 @@ class RecognitionProcessor:
             if not self._should_publish(username):
                 return
 
-            result = FaceRecognized(
-                face_id=face_id,
-                bbox=bbox,
-                username=username,
-                score=score,
-                embedding=embedding.tolist(),
-            )
-            self.mq.publish(
-                body=result.SerializeToString(),
-                routing_key=settings.rabbitmq.FACE_RECOGNIZED_ROUTING_KEY,
-            )
+            # result = FaceRecognized(
+            #     face_id=face_id,
+            #     bbox=bbox,
+            #     username=username,
+            #     score=score,
+            #     embedding=embedding.tolist(),
+            # )
+            # self.mq.publish(
+            #     body=result.SerializeToString(),
+            #     routing_key=settings.rabbitmq.FACE_RECOGNIZED_ROUTING_KEY,
+            # )
             logger.info(
                 "face_unknown",
                 extra={
