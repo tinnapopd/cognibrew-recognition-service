@@ -1,0 +1,204 @@
+@startuml cognibrew-recognition-service-code
+!include <C4/C4_Component>
+
+title Code-Level Diagram — cognibrew-recognition-service
+
+package "src/" {
+
+    package "main.py" {
+        class RecognitionProcessor {
+            -threshold: float
+            -qdrant: QdrantProcessor
+            -mq: MessageQueue
+            -cooldown_seconds: int
+            -_last_published: dict[str, float]
+            --
+            +start() -> None
+            -_should_publish(username: str): bool
+            -_identify(embedding: np.ndarray): Optional[Dict]
+            -_on_face_embedded(body: bytes): None
+        }
+
+        class FaceUpdateProcessor {
+            -qdrant: QdrantProcessor
+            -mq: MessageQueue
+            --
+            +start() -> None
+            -_on_face_updated(body: bytes): None
+        }
+
+        class main <<function>> {
+            +main() -> None
+        }
+    }
+
+    package "core/" {
+
+        package "message_queue.py" {
+            class MessageQueue {
+                -_config: RabbitMQConfig
+                -_exchange: str
+                -_queue: str
+                -_connection: pika.BlockingConnection | None
+                -_channel: BlockingChannel | None
+                --
+                +connect(binding_keys?: list[str]): None
+                +channel: BlockingChannel  {property}
+                +publish(body: bytes, routing_key: str): None
+                +consume(callback: Callable): None
+                +close(): None
+            }
+        }
+
+        package "vectordb.py" {
+            class QdrantProcessor {
+                -client: QdrantClient
+                -collection_name: str
+                --
+                +create(embedding, username, is_correct?, point_id?): str
+                +create_batch(embeddings, usernames, is_corrects?, point_ids?): list[str]
+                +search(query_embedding, top_k?, score_threshold?, with_vectors?): list[dict]
+                +get(point_id: str): Optional[dict]
+                +update(point_id, embedding?, username?, is_correct?): None
+                +delete(point_ids: list[str]): None
+                -_ensure_collection(): None
+                -_build_payload(username, is_correct): dict
+            }
+            note right of QdrantProcessor
+                gRPC (prefer_grpc=True).
+                Collection: face_embeddings
+                Distance: COSINE, dim: 512
+            end note
+        }
+
+        package "logger.py" {
+            class Logger <<Singleton>> {
+                -{static} _instance: Logger
+                -_initialized: bool
+                -logger: logging.Logger
+                --
+                +get_logger(): logging.Logger
+            }
+            note bottom of Logger
+                Singleton via __new__.
+                Emits structured JSON via
+                python-json-logger.
+            end note
+        }
+
+        package "config.py" {
+            class RabbitMQConfig <<BaseSettings>> {
+                +HOST: str = "localhost"
+                +PORT: int = 5672
+                +USERNAME: str
+                +PASSWORD: str
+                +INFERENCE_EXCHANGE_NAME: str
+                +INFERENCE_QUEUE_NAME: str
+                +FACE_EMBEDDED_ROUTING_KEY: str
+                +FACE_RECOGNIZED_ROUTING_KEY: str
+                +FACE_UPDATE_EXCHANGE_NAME: str
+                +FACE_UPDATE_QUEUE_NAME: str
+                +FACE_UPDATE_ROUTING_KEY: str
+                +SEND_COOLDOWN_SECONDS: int = 30
+            }
+
+            class QdrantConfig <<BaseSettings>> {
+                +HOST: str = "localhost"
+                +PORT: int = 6334
+                +COLLECTION_NAME: str
+                +EMBEDDING_DIM: int = 512
+            }
+
+            class ModelConfig <<BaseSettings>> {
+                +SIMILARITY_THRESHOLD: float = 0.65
+                --
+                +validate_similarity_threshold(v): float
+            }
+
+            class Settings {
+                +rabbitmq: RabbitMQConfig
+                +qdrant: QdrantConfig
+                +model: ModelConfig
+                --
+                {static} settings: Settings
+            }
+
+            Settings "1" *-- "1" RabbitMQConfig
+            Settings "1" *-- "1" QdrantConfig
+            Settings "1" *-- "1" ModelConfig
+        }
+    }
+
+    package "schemas/" {
+        package "proto/" {
+            class FaceEmbedding <<Protobuf>> {
+                +face_id: string
+                +bbox: repeated int32
+                +embedding: repeated float
+                +det_score: float
+                --
+                +ParseFromString(bytes): None
+            }
+            note right of FaceEmbedding
+                Generated from
+                proto/face_embedding.proto
+                package: cognibrew.inference
+            end note
+
+            class FaceRecognized <<Protobuf>> {
+                +face_id: string
+                +bbox: repeated int32
+                +username: string
+                +score: float
+                +embedding: repeated float
+                --
+                +SerializeToString(): bytes
+            }
+            note right of FaceRecognized
+                Generated from
+                proto/face_result.proto
+                package: cognibrew.recognition
+            end note
+
+            class PersonUpdate <<Protobuf>> {
+                +face_id: string
+                +username: string
+                +embedding: repeated float
+                --
+                +ParseFromString(bytes): None
+            }
+            note right of PersonUpdate
+                Generated from
+                proto/face_update.proto
+                package: cognibrew.vectordb
+            end note
+        }
+    }
+}
+
+' Entrypoint
+main ..> RecognitionProcessor : instantiates
+main ..> FaceUpdateProcessor  : instantiates
+
+' RecognitionProcessor
+RecognitionProcessor ..> FaceEmbedding    : ParseFromString()
+RecognitionProcessor ..> QdrantProcessor  : search()
+RecognitionProcessor ..> FaceRecognized   : SerializeToString()
+RecognitionProcessor ..> MessageQueue     : publish() / consume()
+RecognitionProcessor ..> Settings         : reads threshold / rabbitmq config
+RecognitionProcessor ..> Logger           : logging
+
+' FaceUpdateProcessor
+FaceUpdateProcessor ..> PersonUpdate      : ParseFromString()
+FaceUpdateProcessor ..> QdrantProcessor   : search / delete / create
+FaceUpdateProcessor ..> MessageQueue      : consume()
+FaceUpdateProcessor ..> Settings          : reads rabbitmq config
+FaceUpdateProcessor ..> Logger            : logging
+
+' Core internals
+MessageQueue ..> RabbitMQConfig : reads config
+MessageQueue ..> Logger         : logging
+QdrantProcessor ..> QdrantConfig : reads config
+QdrantProcessor ..> Logger       : logging
+
+@enduml

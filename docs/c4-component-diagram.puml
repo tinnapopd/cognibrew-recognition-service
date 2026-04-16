@@ -1,0 +1,57 @@
+@startuml cognibrew-recognition-service-component
+!include <C4/C4_Component>
+
+title Component Diagram — cognibrew-recognition-service
+
+System_Ext(inference_server, "cognibrew-inference-server", "Publishes FaceEmbedding protobuf messages\nExchange: cognibrew.inference\nRouting Key: face.embedded")
+System_Ext(cloud, "Cognibrew Cloud", "Publishes PersonUpdate protobuf messages\nExchange: cognibrew.vectordb\nRouting Key: face.updated")
+System_Ext(rabbitmq, "RabbitMQ", "Message broker (AMQP / topic exchange)\nInbound  – cognibrew.inference / face.embedded\nInbound  – cognibrew.vectordb  / face.updated\nOutbound – cognibrew.inference / face.recognized")
+System_Ext(qdrant, "Qdrant", "Vector database (gRPC)\nCollection: face_embeddings (512-dim cosine)")
+
+System_Boundary(recognition, "cognibrew-recognition-service") {
+
+    Container_Boundary(consumers, "main.py — Consumers") {
+        Component(recognition_proc, "RecognitionProcessor", "Python class / Thread", "Consumes FaceEmbedding from inference service.\nLooks up identity in Qdrant by cosine similarity.\nPublishes FaceRecognized on match.\nApplies per-username cooldown to suppress duplicates.")
+        Component(face_update_proc, "FaceUpdateProcessor", "Python class / Thread", "Consumes PersonUpdate from Cloud.\nUpserts or replaces person embeddings in Qdrant.")
+    }
+
+    Container_Boundary(core_layer, "core/") {
+        Component(mq_client, "MessageQueue", "Python / pika", "Wraps pika BlockingConnection.\nDeclares durable topic exchange + queue.\nSupports publish() and consume().")
+        Component(qdrant_proc, "QdrantProcessor", "Python / qdrant-client", "Manages Qdrant collection lifecycle.\nOperations: create, create_batch,\nsearch, get, update, delete.")
+        Component(config, "Settings", "Python / pydantic-settings", "Aggregates RabbitMQConfig, QdrantConfig,\nModelConfig. Loads from env / .env.")
+        Component(logger, "Logger (singleton)", "Python / python-json-logger", "Singleton. Structured JSON log\nhandler per calling file.")
+    }
+
+    Container_Boundary(schemas_layer, "schemas/") {
+        Component(face_embedding_pb2, "face_embedding_pb2", "Python / Protobuf (generated)", "Generated from face_embedding.proto.\nMessage: FaceEmbedding\n  {face_id, bbox, embedding, det_score}")
+        Component(face_result_pb2, "face_result_pb2", "Python / Protobuf (generated)", "Generated from face_result.proto.\nMessage: FaceRecognized\n  {face_id, bbox, username, score, embedding}")
+        Component(face_update_pb2, "face_update_pb2", "Python / Protobuf (generated)", "Generated from face_update.proto.\nMessage: PersonUpdate\n  {face_id, username, embedding}")
+    }
+}
+
+Rel(inference_server, rabbitmq, "Publishes FaceEmbedding", "Protobuf / AMQP")
+Rel(cloud, rabbitmq, "Publishes PersonUpdate", "Protobuf / AMQP")
+
+Rel(rabbitmq, recognition_proc, "Delivers face.embedded messages", "AMQP consume")
+Rel(rabbitmq, face_update_proc, "Delivers face.updated messages", "AMQP consume")
+
+Rel(recognition_proc, face_embedding_pb2, "ParseFromString(body)")
+Rel(recognition_proc, qdrant_proc, "search(embedding, top_k=1, threshold)")
+Rel(recognition_proc, face_result_pb2, "SerializeToString() → FaceRecognized")
+Rel(recognition_proc, mq_client, "publish(body, face.recognized)")
+
+Rel(face_update_proc, face_update_pb2, "ParseFromString(body)")
+Rel(face_update_proc, qdrant_proc, "search / delete / create")
+
+Rel(mq_client, rabbitmq, "AMQP publish (topic exchange)", "Protobuf bytes")
+Rel(qdrant_proc, qdrant, "gRPC upsert / query / delete", "qdrant-client")
+
+Rel(mq_client, config, "reads RabbitMQConfig")
+Rel(qdrant_proc, config, "reads QdrantConfig")
+Rel(recognition_proc, config, "reads ModelConfig (threshold)")
+Rel(recognition_proc, logger, "structured logging")
+Rel(face_update_proc, logger, "structured logging")
+Rel(mq_client, logger, "structured logging")
+Rel(qdrant_proc, logger, "structured logging")
+
+@enduml
